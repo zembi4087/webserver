@@ -1,0 +1,73 @@
+mysql:
+  image: mysql
+  volumes:
+    - ./mysql:/var/lib/mysql
+  environment:
+    MYSQL_ROOT_PASSWORD: 1AbrakadabrA1
+    MYSQL_DATABASE: xz
+    MYSQL_USER: admin
+    MYSQL_PASSWORD: 1AbrakadabrA1
+    
+memcached:
+  image: memcached
+  restart: always
+  ports:
+    - 1080:1080    
+    
+redis:
+   image: redis:alpine
+   restart: always
+   ports:
+     - 6379:6379
+   command: redis-server --appendonly yes  
+   volumes:
+    - ./redis:/var/lib/redis/data
+
+phpfpm:
+    build: phpfpm
+    links:
+    - mysql
+    - memcached
+    - redis
+    ports:
+        - 9000:9000
+    volumes:
+        #- ./public:/usr/share/nginx/html  
+        - /home/newt/work/htdocs/ruir_test:/usr/share/nginx/html
+
+nginx:
+    image: tutum/nginx
+    ports:
+        - 8079:80
+    links:
+        - phpfpm
+    volumes:
+        - ./nginx/default:/etc/nginx/sites-available/default
+        - ./nginx/default:/etc/nginx/sites-enabled/default
+
+        - ./logs/nginx-error.log:/var/log/nginx/error.log
+        - ./logs/nginx-access.log:/var/log/nginx/access.log
+
+        - /home/newt/work/htdocs/ruir_test:/usr/share/nginx/html
+
+phpmyadmin:
+  image: phpmyadmin/phpmyadmin
+  restart: always
+  links:
+    - mysql
+  ports:
+    - 8080:80
+  environment:
+    MYSQL_USERNAME: admin
+    MYSQL_ROOT_PASSWORD: 1AbrakadabrA1
+    PMA_HOST: mysql
+    
+# phpRedisAdmin container - actency images
+phpredisadmin:
+  image: actency/docker-phpredisadmin
+  ports:
+    - 9900:80
+  environment:
+    - REDIS_1_HOST=redis
+  links:
+    - redis
